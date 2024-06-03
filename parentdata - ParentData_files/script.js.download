@@ -1,0 +1,510 @@
+document.addEventListener('DOMContentLoaded', function () {
+
+  jQuery('[data-nw-type]').on('click', function () {
+    const $this = jQuery(this);
+    const newsletterType = $this.data('nw-type');
+    const action = $this.data('nw-action');
+
+    $this.find('.nw-btn-label').css('visibility', 'hidden');
+    $this.find('.signup-loader').removeClass('d-none');
+
+    update_newsletter_subscriptions(newsletterType, action);
+  });
+
+  jQuery('.navbar-toggler-btn').on('click', function () {
+    jQuery("#sliding_header").slideDown("slow");
+  })
+  jQuery('.close_slide_header').on('click', function () {
+    jQuery("#sliding_header").slideUp("slow");
+  })
+
+  const sub_account_btn = document.querySelectorAll('a[href*="action=manage_sub_account"]');
+  if (sub_account_btn && sub_account_btn?.length) {
+    const anchor = sub_account_btn[0].href;
+    if (anchor) {
+      const cusotm_sub_buttons = document.querySelectorAll(".share_subscription_redirect_btn");
+      for (const btn of cusotm_sub_buttons) {
+        btn.href = anchor;
+        btn.classList.remove("d-none")
+      }
+    }
+  }
+
+  const pause_btn = document.getElementById("pause_btn");
+  if (pause_btn) {
+    pause_btn.addEventListener('click', function () {
+      let modalSelector = `.profile-unsubscribe__modal--wrapper[data-unsubscribe-modal='pgpause']`;
+      let modal = document.querySelector(modalSelector);
+      modal.classList.add('active');
+    });
+  }
+
+  const pause_btn_confirm = document.getElementById("pause_btn_confirm");
+  if (pause_btn_confirm) {
+    pause_btn_confirm.addEventListener('click', function () {
+      update_pg_value_data('paused');
+      let modalSelector = `.profile-unsubscribe__modal--wrapper[data-unsubscribe-modal='pgpause']`;
+      let modal = document.querySelector(modalSelector);
+      modal.classList.remove('active');
+    });
+  }
+
+  const pregselect = document.querySelector('select[name="week_preg"]');
+  if (pregselect) {
+    pregselect.addEventListener('change', function () {
+      update_pg_value_data(pregselect.value);
+    });
+  }
+
+  const close_model_wrapper = document.getElementById('close-model--wrapper');
+  if (close_model_wrapper) {
+    close_model_wrapper.addEventListener('click', function (e) {
+      let parent = e.target.closest(".profile-unsubscribe__modal--wrapper");
+      parent.classList.remove('active');
+    });
+  }
+
+  function update_pg_value_data(wk_value) {
+    let xhr = new XMLHttpRequest();
+    // Configure it: GET-request for /wp-admin/admin-ajax.php
+    xhr.open('GET', '/wp-admin/admin-ajax.php?action=update_pregnancy&week=' + encodeURIComponent(wk_value), true);
+
+    // Setup a callback function to handle the response
+    xhr.onload = function () {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        // Success! Handle the response
+        console.log('Success', xhr.responseText);
+        location.reload();
+      } else {
+        // Error! Handle the error
+        console.error('Error:', xhr.statusText);
+      }
+    };
+
+    // Setup a callback function to handle network errors
+    xhr.onerror = function () {
+      console.error('Network Error');
+    };
+
+    // Send the request
+    xhr.send();
+  }
+
+  function update_newsletter_subscriptions(type, action) {
+    console.log('was here');
+    let xhr = new XMLHttpRequest();
+    // Configure it: GET-request for /wp-admin/admin-ajax.php
+    xhr.open('GET', '/wp-admin/admin-ajax.php?action=update_newsletter_subscriptions&nw_type=' + encodeURIComponent(type) + '&nw_action=' + action, true);
+
+    // Setup a callback function to handle the response
+    xhr.onload = function () {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        // Success! Handle the response
+        console.log('Success', xhr.responseText);
+        location.reload();
+      } else {
+        // Error! Handle the error
+        console.error('Error:', xhr.statusText);
+      }
+    };
+
+    // Setup a callback function to handle network errors
+    xhr.onerror = function () {
+      console.error('Network Error');
+    };
+
+    // Send the request
+    xhr.send();
+  }
+
+  // Accordion
+  let accordionToggleButton = document.querySelectorAll(".profile-subscription__header--arrow");
+  if (accordionToggleButton) accordionToggleButton.forEach((item) => {
+    item.addEventListener("click", function (e) {
+      let box = e.target.closest(".profile-subscription__box");
+      let body = box.querySelector(".profile-subscription__body");
+      let bodyHeight = body.offsetHeight;
+      const bodyScrollHeight = body.scrollHeight;
+      if (box.classList.contains("show")) {
+        let collapseInterval = setInterval(() => {
+          if (bodyHeight >= 0) {
+            bodyHeight = bodyHeight - 5;
+            body.style.height = bodyHeight + 'px';
+          } else {
+            body.removeAttribute('style');
+            box.classList.remove("show");
+            clearInterval(collapseInterval);
+          }
+        }, 0)
+      } else {
+        let collapseInterval = setInterval(() => {
+          if (bodyHeight <= bodyScrollHeight) {
+            bodyHeight = bodyHeight + 5;
+            body.style.height = bodyHeight + 'px';
+          } else {
+            body.removeAttribute('style');
+            box.classList.add("show");
+            clearInterval(collapseInterval);
+          }
+        }, 0)
+      }
+    })
+  })
+
+  // Dropdown
+  jQuery('.subscription__dropdown_action_button_arrow').on('click', function () {
+    const $this = jQuery(this);
+    const icon = $this.find('.down-arrow-icon');
+    const parent = $this.closest('.profile-subscription__dropdown');
+    const sibling = $this.siblings('.profile-subscription__dropdown-action-buttons');
+    if (parent.hasClass('open')) {
+      parent.removeClass('open');
+      sibling.removeClass('open').hide('fast');
+      icon.removeClass('reverse');
+    } else {
+      icon.addClass('reverse');
+      parent.addClass('open');
+      sibling.addClass('open').show('fast');
+    }
+
+  });
+
+  function subscription(e, type) {
+    if (type.toLowerCase().indexOf('unsubscribe') > -1) {
+      let modalSelector = `.profile-unsubscribe__modal--wrapper[data-unsubscribe-modal='${type}']`;
+      let modal = document.querySelector(modalSelector);
+      modal.classList.add('active');
+    } else {
+      if (e.target.classList.contains('profile-subscription__dropdown--hidden')) {
+        e.target.classList.remove('profile-subscription__dropdown--hidden');
+        e.target.classList.remove('profile-subscription__dropdown--abs');
+        e.target.classList.add('selected');
+        let siblings = getAllSiblings(e.target);
+        siblings.forEach((item) => {
+          if (item !== e.target) {
+            item.classList.remove("selected");
+            item.classList.add("profile-subscription__dropdown--hidden");
+            item.classList.add("profile-subscription__dropdown--abs");
+          }
+          if (item.classList.contains('visible')) {
+            item.classList.remove('visible');
+          }
+        })
+        profileDataDropdownArrow.forEach((item) => {
+          if (item.classList.contains('active')) {
+            item.classList.remove('active');
+          }
+        })
+        let selector = `.profile-subscription__body--inner[data-plan='${type}']`
+        let result = document.querySelector(selector);
+        if (result.classList.contains('d-none')) {
+          result.classList.remove('d-none');
+        }
+        let resSiblings = getAllSiblings(result);
+        resSiblings.forEach((item) => {
+          if (item !== result) {
+            item.classList.add('d-none')
+          }
+        })
+      }
+    }
+  }
+
+  function confirmUnsubscribe(e) {
+    let parent = e.target.closest(".profile-unsubscribe__modal--wrapper");
+    let parentDataAttribute = parent.dataset.unsubscribeModal;
+    let dataToDisplaySelector = `.profile-subscription__body--inner[data-plan='${parentDataAttribute}']`;
+    let dataToDisplay = document.querySelector(dataToDisplaySelector);
+    if (dataToDisplay.classList.contains('d-none')) {
+      dataToDisplay.classList.remove('d-none');
+      parent.classList.remove('active');
+    }
+    let dataToDisplaySiblings = getAllSiblings(dataToDisplay);
+    dataToDisplaySiblings.forEach((item) => {
+      if (item !== dataToDisplay) {
+        item.classList.add('d-none')
+      }
+    })
+    let unsubscribeButtonSelector = `.${parentDataAttribute}`;
+    let unsubscribeButton = document.querySelector(unsubscribeButtonSelector);
+    unsubscribeButton.classList.add('selected');
+    unsubscribeButton.classList.remove("profile-subscription__dropdown--hidden");
+    unsubscribeButton.classList.remove("profile-subscription__dropdown--abs");
+    let siblings = getAllSiblings(unsubscribeButton);
+    siblings.forEach((item) => {
+      if (item !== unsubscribeButton) {
+        item.classList.remove("selected");
+        item.classList.add("profile-subscription__dropdown--hidden");
+        item.classList.add("profile-subscription__dropdown--abs");
+      }
+      if (item.classList.contains('visible')) {
+        item.classList.remove('visible');
+      }
+    })
+    profileDataDropdownArrow.forEach((item) => {
+      if (item.classList.contains('active')) {
+        item.classList.remove('active');
+      }
+    })
+  }
+
+  function cancel(e) {
+    let parent = e.target.closest(".profile-unsubscribe__modal--wrapper");
+    parent.classList.remove('active');
+    profileDataDropdownArrow.forEach((x) => {
+      if (x.classList.contains('active')) {
+        x.classList.remove("active");
+        let parentOfX = x.closest(".profile-subscription__header");
+        let buttons = parentOfX.querySelectorAll(".profile-subscription__dropdown--button");
+        buttons.forEach((b) => {
+          if (b.classList.contains('visible')) {
+            b.classList.remove("visible");
+          }
+        })
+      }
+    })
+  }
+
+  function getAllSiblings(elem) {
+    var sibs = [];
+    elem = elem.parentNode.firstChild;
+    do {
+      if (elem.nodeType === 3) continue; // text node
+      sibs.push(elem);
+    } while (elem = elem.nextSibling)
+    return sibs;
+  }
+
+  (function getCouponInfo() {
+    let couponDoms = document.getElementsByClassName("coupon-value");
+
+    for (const dom of couponDoms) {
+      // Get the value of the data-txn-id attribute
+      let txnId = dom.dataset.txnId;
+      console.log("Transaction ID:", txnId);
+
+      // Create a new XMLHttpRequest object
+      let xhr = new XMLHttpRequest();
+
+      // Configure it: GET-request for /wp-admin/admin-ajax.php
+      xhr.open('GET', '/wp-admin/admin-ajax.php?action=fetch_translations&trns_id=' + encodeURIComponent(txnId), true);
+
+      // Setup a callback function to handle the response
+      xhr.onload = function () {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          // Success! Handle the response
+          let data = JSON.parse(xhr.responseText);
+          if (data.data?.membership?.price && data.data?.subscription?.price) {
+            let dis = data.data?.membership?.price - data.data?.subscription?.price;
+            dis = dis.toFixed(2);
+            dom.innerHTML = '$' + dis + ' discount applied'
+          }
+        } else {
+          // Error! Handle the error
+          console.error('Error:', xhr.statusText);
+        }
+      };
+
+      // Setup a callback function to handle network errors
+      xhr.onerror = function () {
+        console.error('Network Error');
+      };
+
+      // Send the request
+      xhr.send();
+    }
+  })();
+
+});
+
+jQuery(document).ready(function ($) {
+  const updateButton = $('.mepr-account-row-action.mepr-account-update');
+  if (updateButton) {
+    updateButton.text('Update payment');
+  }
+  const changePlanBtn = $('a.mepr-open-upgrade-popup.mepr-account-row-action.mepr-account-upgrade');
+  let selectedProductName = '';
+  if (changePlanBtn) {
+    changePlanBtn.text('Change plan');
+    changePlanBtn.on('click', function () {
+      selectedProductName = $(this).closest('.item-row')?.data('product_name');
+    })
+  }
+
+  $('select.mepr-upgrade-dropdown option').each(function () {
+    const planName = $(this).closest('.item-row')?.data('product_name');
+    const $url = $(this).val();
+
+    if ($url?.includes(planName)) {
+      $(this).hide();
+    }
+
+    const optionText = $(this).text();
+    // Find the index of the first opening parenthesis "("
+    const indexOfOpeningParenthesis = optionText.indexOf('(');
+
+    let newOptionTextPreText = '';
+
+    // Check if the option text contains "month"
+    if (optionText.toLowerCase().includes('month')) {
+      newOptionTextPreText = 'Monthly';
+    }
+    // Check if the option text contains "year"
+    else if (optionText.toLowerCase().includes('year')) {
+      newOptionTextPreText = 'Annual';
+    }
+
+    // If an opening parenthesis is found, update the option text
+    if (indexOfOpeningParenthesis !== -1) {
+      // Find the index of the last closing parenthesis ")"
+      const indexOfClosingParenthesis = optionText.lastIndexOf(')');
+
+      // If a closing parenthesis is found, update the option text
+      if (indexOfClosingParenthesis !== -1) {
+        // Get the text between the first "(" and last ")"
+        const newOptionText = optionText.substring(indexOfOpeningParenthesis + 1, indexOfClosingParenthesis);
+
+        if (newOptionTextPreText) {
+          $(this).text(newOptionTextPreText + ' (' + newOptionText.trim() + ')');
+        } else {
+          // Update the option text with the trimmed text between "(" and ")"
+          $(this).text(newOptionText.trim());
+        }
+      }
+    }
+  });
+
+  $('.account-sub-cancel').on('click', function (e) {
+    e.stopPropagation();
+    e.preventDefault();
+    const $this = $(this);
+    const subId = $this.data('sub_id');
+    const html = customMprConfirmModal(subId, 'cancel', 'Are you sure you want to cancel this subscription?');
+    $('body').append(html);
+    $('html').addClass('cmpr_overflow_hidden');
+  });
+  let $target = $('.custom-mepr-white-popup');
+  $(document).on('click', function (e) {
+    $target = $('.custom-mepr-white-popup')
+    if (!$target.is(e.target) && $target.has(e.target).length === 0) {
+      clearDomForModal();
+    }
+  });
+  $('body').on('click', '.custom-mfp-close, .custom-mfp-bg, .custom-mepr-confirm-no, .custom-mepr-ok', function () {
+    clearDomForModal();
+  });
+
+  function clearDomForModal() {
+    $('html').removeClass('cmpr_overflow_hidden');
+    $('.custom-mfp-bg')?.remove();
+    $('.custom.mfp-wrap')?.remove();
+  }
+
+  function customMprConfirmModal(sub_id, action, title, redirect_url = '') {
+    return `
+      <div class="custom-mfp-bg mfp-bg mfp-ready"></div>
+      <div class="custom mfp-wrap mfp-auto-cursor mfp-ready" tabindex="-1" style="overflow: hidden auto;">
+        <div class="mfp-container mfp-s-ready mfp-inline-holder">
+          <div class="mfp-content">
+            <div class="mepr-white-popup custom-mepr-white-popup">
+              <div class="mepr-cancel-sub-text">${title}</div>
+              <div class="mepr-cancel-sub-buttons">
+                <button class="mepr-btn mepr-left-margin custom-mepr-confirm-${action}-yes" data-redirect_url="${redirect_url}" data-sub_id="${sub_id}">Yes</button>
+                <button class="mepr-btn custom-mepr-confirm-no">No</button>
+              </div>
+            </div>
+          </div>
+          <div class="mfp-preloader">Loading...</div>
+        </div>
+        <button title="Close (Esc)" type="button" class="mfp-close custom-mfp-close">×</button>
+      </div>
+      `;
+  }
+
+  $('body').on('click', '.custom-mepr-confirm-cancel-yes', function (e) {
+    e.preventDefault();
+    requestPauseOrCancel(e, 'custom_mpr_cancel_action');
+  });
+
+  $('body').on('click', '.custom-mepr-confirm-pause-yes', function (e) {
+    e.preventDefault();
+    const redirect_url = $(this).data('redirect_url');
+    if (redirect_url !== '') {
+      window.location.href = redirect_url;
+    } else {
+      requestPauseOrCancel(e, 'custom_mpr_pause_action');
+    }
+  });
+
+  function requestPauseOrCancel(e, action) {
+    const parent = $(e.target).closest('.custom-mepr-white-popup');
+
+    // Data to be sent in the POST request
+    const postData = {
+      action: action, // The name of your backend action hook
+      sub_id: +$(e.target).data('sub_id'),
+    };
+    $('.mepr-cancel-sub-buttons')?.hide();
+    const loader = $('<div class="loader"></div>');
+    parent.append(loader);
+
+    // Make the AJAX request
+    $.ajax({
+      type: 'POST',
+      url: adminAjaxUrl,
+      data: postData,
+      success: function (response) {
+        console.log({ response });
+        parent.html(`<p>${response.message}</p><button class="mepr-btn custom-mepr-ok">Ok</button>`);
+
+      },
+      error: function (error) {
+        console.error(error);
+      }
+    });
+  }
+
+  $('a.mepr-account-row-action.mepr-account-suspend')?.removeAttr('onclick');
+
+  $('a.mepr-account-row-action.mepr-account-suspend').on('click', async function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const parent = $(e.target).closest('.custom-mepr-white-popup');
+    const $e = e;
+    const $this = $(this);
+    const q = new URLSearchParams($this.attr('href'));
+    const sub_id = q.get('sub');
+
+
+
+    const ajaxPromise = new Promise((resolve, reject) => {
+      $.ajax({
+        type: 'POST',
+        url: adminAjaxUrl,
+        data: {
+          action: 'check_sub_status_on_stripe',
+          sub_id
+        },
+        beforeSend: function () {
+          parent.html('<div class="mfp-preloader">Verifying...</div>');
+        },
+        success: resolve,
+        error: reject
+      });
+    });
+
+    await ajaxPromise.then(function (res) {
+      let html = '';
+      console.log({ sub_status: res?.status });
+      if (res?.is_active) {
+        html = customMprConfirmModal(sub_id, 'pause', 'Are you sure you want to pause this subscription?', $this.attr('href'));
+      } else {
+        html = customMprConfirmModal(sub_id, 'pause', 'Are you sure you want to pause this subscription?');
+      }
+      $('body').append(html);
+      $('html').addClass('cmpr_overflow_hidden');
+    }).catch(function (error) { console.error(error) });
+
+    return false;
+  })
+});

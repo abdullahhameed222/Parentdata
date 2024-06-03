@@ -1,0 +1,122 @@
+jQuery(document).ready(function ($) {
+    homepage_pop_up();
+    function homepage_pop_up(hotflash_data) {
+        if (user_eligibility_by_time()) {
+            const section = document.getElementById("hot_flash_popup_section");
+            if (section) {
+                const masthead = document.getElementById("masthead");
+                const sitecontent = document.getElementsByClassName("site-content");
+                section.classList.add('custom-popup')
+                section.style.display = "block";
+                masthead.style.zIndex = "0";
+                if (sitecontent) {
+                    for (i = 0; i < sitecontent.length; i++) {
+                        sitecontent[i].style.zIndex = "unset";
+                    }
+                }
+            }
+
+        }
+    }
+
+    const close_popup = document.querySelector("[data-hotflas-popup-dismissible]");
+    if (close_popup) {
+        close_popup.addEventListener("click", function () {
+            disableHotflashModal();
+        });
+    }
+
+    function disableHotflashModal() {
+        const section = document.getElementById("hot_flash_popup_section");
+        const masthead = document.getElementById("masthead");
+        const sitecontent = document.getElementsByClassName("site-content");
+        section.classList.remove('custom-popup')
+        section.style.display = "none";
+        masthead.style.zIndex = "100";
+        if (sitecontent) {
+            for (i = 0; i < sitecontent.length; i++) {
+                sitecontent[i].style.zIndex = "10";
+            }
+        }
+
+    }
+
+
+    function setCookie(name, value, expirationTime) {
+        document.cookie = name + '=' + encodeURIComponent(value) +
+            '; expires=' + new Date(expirationTime).toUTCString() +
+            '; path=/';
+    }
+
+    function getCookie(name) {
+        let match = document.cookie.match(new RegExp(name + '=([^;]+)'));
+        return match ? decodeURIComponent(match[1]) : null;
+    }
+
+    function user_eligibility_by_time() {
+        const hotflash_popup_cookie = 'hot_flash_user_popup';
+        const hotflash_cookie_max_lifetime = 3;
+        let timeStamp = getCookie(hotflash_popup_cookie);
+
+        if (timeStamp) {
+            let currentTime = new Date().getTime();
+            let storedTime = parseInt(timeStamp);
+            if (currentTime - storedTime < hotflash_cookie_max_lifetime * 24 * 60 * 60 * 1000) {
+                return false; // User has visited within the last 3 days
+            }
+        }
+        let newTimeStamp = new Date().getTime().toString();
+        setCookie(hotflash_popup_cookie, newTimeStamp, new Date().getTime() + (hotflash_cookie_max_lifetime * 24 * 60 * 60 * 1000));
+        return true;
+    }
+
+    $('.hot_flash_popup_form').on('submit', function (event) {
+        event.preventDefault();
+        console.log(event.target);
+
+        const data = {
+            'first_name': event.target.querySelector('[data-hotflash_firstName]').value,
+            'last_name': event.target.querySelector('[data-hotflash_LastName]').value,
+            'email': event.target.querySelector('[data-hotflash_email]').value,
+            'nonce': event.target.querySelector('#hot_flash_sign_up_nonce').value,
+            'path': window.location.pathname,
+        };
+
+        // Get form data
+        $.ajax({
+            type: 'POST',
+            url: '/wp-admin/admin-ajax.php',
+            dataType: 'json',
+            data: {
+                // action: 'hot_flash_sign_up',
+                action: 'free_membership_on_sign_up',
+                data: data,
+            },
+            success: function (response) {
+
+                // Handle the success response, if needed
+                if (response?.status == "success" && response?.user_id) {
+                    let innerHtml = `<div class="alert alert-success" role="alert">${response.message}</div>`
+                    $('#hotflash_sucess_message').html(innerHtml)
+                    $('#signup_click_loader').addClass('d-none');
+                    setTimeout(() => {
+                        if (response?.path == "/hotflash-signup/") {
+                            const url = "/"
+                            window.location.href = url;
+                        } else {
+                            location.reload();
+                        }
+                    }, 2000);
+                } else {
+                    let innerHtml = `<div class="alert alert-danger" role="alert">${response.message}</div>`
+                    $('#hotflash_sucess_message').html(innerHtml)
+                    $('#signup_click_loader').addClass('d-none');
+                }
+            },
+            error: function () {
+                // Handle errors, if any
+                console.error('AJAX request failed');
+            }
+        });
+    });
+});

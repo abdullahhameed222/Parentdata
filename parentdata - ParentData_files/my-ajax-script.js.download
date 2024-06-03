@@ -1,0 +1,342 @@
+jQuery(document).ready(function ($) {
+
+    let typingTimer; // Timer identifier
+    let doneTypingInterval = 2000; // Time in milliseconds (2 seconds)
+    
+    $('#promotion_code').keyup(function () {
+        // Clear the previous timer, if any
+        clearTimeout(typingTimer);
+        $("#cart-discount-loader").removeClass('d-none')
+        // Set a new timer
+        typingTimer = setTimeout(function () {
+            // Get the value of the input field
+            let discountCode = $('#promotion_code').val();
+            let pluginEndpoint = '/wp-admin/admin-ajax.php';
+            $.ajax({
+                type: 'GET',
+                url: pluginEndpoint,
+                dataType: 'json',
+                data: {
+                    action: 'fetch_coupon_data',
+                    code: discountCode,
+                },
+                success: function (data) {
+                     // console.log(data.data[0]);
+                    $("#cart-discount-loader").addClass('d-none')
+                    if(data?.data[0]){
+                        let discountData = (data.data);
+                        discountData = discountData.filter(dis => dis.status === "publish");
+                        console.log(discountData);
+                        if (discountData.length) {
+                            showDiscount(discountData);
+                        }
+                    }else{
+                           //console.log('remove');
+                           adjustCart();
+
+                    }
+                },
+                error: function (error) {
+                    console.error('Error:', error);
+                }
+            });
+        }, doneTypingInterval);
+    });
+    
+
+    function showDiscount(discountCode){
+      
+        if(discountCode[0].discount_type == "percent"){
+            let amount = discountCode[0].discount_amount;
+            let sub = $("#price_subtotal").val();
+            let deduct = (sub * amount) / 100;
+            let afterDeduct = sub - deduct;
+            if(afterDeduct >= 0) {
+                $('#price-total').html('$' +afterDeduct.toFixed(2))
+                $('#price-discount').html('$' +deduct)
+            }
+            
+        }else if(discountCode[0].discount_type == "dollar"){
+            let amount = discountCode[0].discount_amount;
+            let sub = $("#price_subtotal").val();
+            let afterDeduct = sub - amount;
+            if(afterDeduct >= 0){
+                $('#price-total').html('$' +afterDeduct.toFixed(2))
+                $('#price-discount').html('$' +amount)
+            }
+            
+        }
+    }
+
+    // Clear the timer when the user starts typing again
+    $('#promotion_code').keydown(function () {
+        clearTimeout(typingTimer);
+    });
+    
+
+
+    $("#send_health_tips").click(function (event) {
+        event.preventDefault();
+        $('input[name="health_tips"]').val(1);
+        $(this).prop('disabled', true);
+        $(this).css('opacity', 0.5);
+        $(this).find('h3')?.text("Got it! You are now subscribed to PregnantData");
+        $("select[name='week_preg']").css("opacity", 0.5);
+    })
+    let selectedPregnantWeeks = $("select[name='week_preg']").val();
+    $("select[name='week_preg']").change(function(event) {
+        const currentValue = event.target.value;
+        if(currentValue === "") {
+            $("#send_health_tips")
+                ?.prop('disabled', true)
+                ?.css('opacity', 0.5)
+                ?.find('h3')?.text('Subscribe to PregnantData');
+            $('input[name="health_tips"]').val(0);
+            return;
+        }
+        
+        if (currentValue === selectedPregnantWeeks) {
+            $("#send_health_tips")
+                ?.prop('disabled', true)
+                ?.css('opacity', 0.5)
+                ?.find('h3')?.text('Got it! You are now subscribed to PregnantData');
+                $('input[name="health_tips"]').val(1);
+            return;
+        }
+        const hiddenHealthTip  = $('input[name="health_tips"]').val();
+       if(currentValue && hiddenHealthTip !== '1'){
+        $('#send_health_tips').prop("disabled", false);
+        $("#send_health_tips").css("opacity", 1)?.find('h3').removeAttr('style');
+       } 
+       
+    });
+
+
+    $("#is_shared").change(function () {
+        if ($(this).is(":checked")) {
+            $("#shared_contact").show(500);
+        } else {
+            $("#shared_contact").hide(500);
+        }
+        adjustCart();
+    });
+    
+    $(".paid-later-main").change(function () {
+        if ($(this).is(":checked")) {
+            $("#main-newsletter-main-price").html("$0");
+        } else {
+            $("#main-newsletter-main-price").html("$10");
+        }
+    });
+
+
+    function handleCheckboxChange() {
+  
+        let isChecked = $("#accept_agreement").is(":checked");
+        let newsletterCheckboxes = $("input[name='newsletter_type[]']");
+        let joinButton = $("#join_the_community");
+
+        if (isChecked && newsletterCheckboxes.filter(":checked").length > 0) {
+            joinButton.prop("disabled", false);
+        } else {
+            joinButton.prop("disabled", true);
+        }
+    }
+
+    function handleCheckboxChanges() {
+
+    let isChecked = $("#accept_agreements").is(":checked");
+    let joinButton = $("#join_the_community");
+        if (isChecked) {
+            joinButton.prop("disabled", false);
+        } else {
+            joinButton.prop("disabled", true);
+        }
+    }
+
+        // Temporaryly this code is plased to check unchekc webreader and other newsletters
+    let optOutAllCheckbox = $("#optOutAll");
+    newsletterCheckboxes = $("input[name='newsletter_type[]']").not("#optOutAll");
+
+    optOutAllCheckbox.change(function () {
+        if (optOutAllCheckbox.prop("checked")) {
+            newsletterCheckboxes.prop("checked", false).prop("disabled", true);
+        } else {
+            newsletterCheckboxes.prop("disabled", false);
+        }
+    });
+
+
+    newsletterCheckboxes.change(function () {
+        if (newsletterCheckboxes.prop("checked")) {
+            optOutAllCheckbox.prop("checked", false).prop("disabled", true);
+        } else {
+            optOutAllCheckbox.prop("disabled", false);
+        }
+    });
+
+    // Attach event listener to the checkbox
+    $("#accept_agreement").on("change", handleCheckboxChange);
+    $("#accept_agreements").on("change", handleCheckboxChanges);
+    // Attach event listener to newsletter checkboxes
+    $("input[name='newsletter_type[]']").on("change", handleCheckboxChange);
+    handleCheckboxChange();
+
+    $('#signup-form').submit(function () {
+        $('.loader_icon').show()
+        $.ajax({
+            type: 'POST',
+            url: ajax_object.ajax_url,
+            data: {
+                action: 'signup_by_email',
+                email: $('#signup_email').val()
+            },
+            success: function (response) {
+                $('.loader_icon').hide()
+                if (response == 'sucess') {
+                    window.location.href = '/account/'
+                } else {
+                    $('#error_signup').html(response)
+                }
+
+            },
+            error: function (xhr, ajaxOptions, thrownError) {
+                $('.loader_icon').hide()
+            }
+        });
+        return false;
+    });
+    $('#signin-form').submit(function () {
+        let email = $('#signin_email').val()
+        if (email == '') {
+          //  alert('Email is required!');
+            $('#signin_up_div h2').text('Oops! Email is required');
+            return;
+        }
+        var regex = /^([a-zA-Z0-9_.+-])+\@(([a-zA-Z0-9-])+\.)+([a-zA-Z0-9]{2,4})+$/;
+
+      if (regex.test(email) == false) {
+        $('#signin_up_div h2').text('Oops! Email not valid.');
+        return;
+    }
+
+        $('#signup_click_loader').addClass('d-block');
+        $('#signup_click_loader').removeClass('d-none');
+        $('#submit_btn').attr("disabled","disabled");
+
+
+        $.ajax({
+            type: 'POST',
+            url: ajax_object.ajax_url,
+            data: {
+                action: 'signin_by_email',
+                email: email
+            },
+            success: function (response) {
+                   $('#signup_click_loader').addClass('d-none');
+                   $('#signup_click_loader').removeClass('d-block');
+             //   $('#signin-form img').hide();
+                if (response != 'User not Found') {
+                    $('#signin_up_div h2').text('Log-in link sent!');
+                    $('.span_email').text(email);
+                    $('.hide_first_part').hide()
+                    $('.resend_div').show()
+                    $('.last_first_part').hide()
+                    $('.hide_first_part_p').html(response)
+                    $('.hide_first_part_p').show()
+                    $('#error_signin').hide()
+                } else {
+                    console.log(email);
+                    //$('#error_signin').html(response)
+                    $('.last_first_part').hide()
+                    $('#signin_up_div h2').text('Oops! We can’t find your account.');
+                    //$('#error_signin').text('If you believe you are receiving this message in error, please email ask@parentdata.org.')
+                    $('#error_signin').html('Please check the email address you entered for typos and try again. If you don’t have an account, please consider <a href="/subscribe/">subscribing</a> or learning more about our <a href="/subscribe/">subscription benefits</a>.')
+                  //  $('#error_signin').text('Access is by invite only. If you don’t have an account please email ' + email)
+                    $('.hide_first_part_p').show();
+                    $('.last_first_part').hide()
+                }
+
+            },
+            error: function (xhr, ajaxOptions, thrownError) {
+                //  $('.loader_icon').hide()
+            }
+        });
+        return false;
+    });
+
+    updateHiddenField('#ParentData_Main_free');
+
+    // Bind a change event to the checkbox
+    $('#ParentData_Main_free').change(function() {
+        updateHiddenField('#ParentData_Main_free');
+    });
+    $('#Hot_Flash_Main_free').change(function() {
+        updateHiddenField('#Hot_Flash_Main_free');
+    });
+    $('#Fertility_Data_Main_free').change(function() {
+        updateHiddenField('#Fertility_Data_Main_free');
+    });
+    $('#Web_Reader_free').change(function() {
+        updateHiddenField('#Web_Reader_free');
+    });
+
+    function updateHiddenField(id) {
+        // Check if the checkbox is checked
+        if (id) {
+            let isChecked = $(id).is(':checked');
+            let resultString = id.replace('#', '').replace('_free', '_price');
+
+            let maxPrice = $('input[name="' + resultString + '"]').data('pd-max-price');
+            
+            // Update the hidden field value based on the checkbox status and data attribute
+            if (isChecked) {
+                $('input[name="' + resultString + '"]').val(0);
+                $('input[name="is_shared_price"]').val(0);
+                $('.for_free').show()
+                $('.free_items').css('opacity','0.5')
+                $('.not_free').hide();
+                $("select[name='week_preg']")
+                    ?.removeAttr('style')
+                    ?.val('');
+                //Subscribe to Pregnant Data
+                $("#send_health_tips")
+                    ?.prop('disabled', true)
+                    ?.css('opacity', 0.5)
+                    ?.find('h3')?.text('Subscribe to PregnantData');
+                    // $('#send_health_tips').prop("disabled", true);
+                    // $("#send_health_tips").css("opacity", 0.5);
+            } else {
+                $('.not_free').show()
+                $('.for_free').hide()
+                $('.free_items').css('opacity',1)
+                $('input[name="' + resultString + '"]').val(maxPrice);
+                let maxPriceForOption = $('input[name="is_shared_price"]').data('pd-max-price');
+                $('input[name="is_shared_price"]').val(maxPriceForOption);
+
+            }
+    
+            // Attach event handler to show/hide pregnantdata pricing
+        }
+    }
+    $('.paid-later').on('click', function() {
+        let inputElements = $('.hidden_newsletter_price_input');
+        if (!inputElements) return;
+        // const $this = $(this);
+        // let sub_type = 'paid';
+        // if ($this.data('is_paid') === 'false') {
+        //     sub_type = 'free';
+        // }
+        const isConfirmed = confirm('Please confirm you want to remove the subscription from cart.');
+        if (!isConfirmed) return;
+        // Set the value of all input elements to 0
+        // inputElements.val(0);
+        jQuery('#remove_cart').attr('name', 'remove_cart').val(1);
+        // // Submit the form with id 'pd-form-cart'
+        document.querySelector('[name="submit"]').click();
+    });
+    
+    
+    
+
+});
